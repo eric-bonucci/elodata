@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>D3 Interactive Multi-Line Chart</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 0; }
+    svg { display: block; margin: auto; background: #f9f9f9; }
+    .line { fill: none; stroke-width: 2px; }
+    .legend { font-size: 12px; cursor: pointer; }
+    .highlight { stroke-width: 4px; }
+    .tooltip {
+      position: absolute;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <svg width="600" height="400"></svg>
+  <div class="tooltip" style="display:none;"></div>
+  <script>
+    const svg = d3.select("svg");
+    const width = +svg.attr("width") - 60;
+    const height = +svg.attr("height") - 60;
+    const margin = {top: 20, right: 20, bottom: 40, left: 40};
+
+    const data = [
+      {name: "Apples", values: [10, 15, 20, 25, 18, 22]},
+      {name: "Bananas", values: [5, 10, 15, 12, 8, 10]},
+      {name: "Cherries", values: [12, 18, 15, 22, 28, 24]}
+    ];
+
+    const xScale = d3.scaleLinear().domain([0, 5]).range([margin.left, width]);
+    const yScale = d3.scaleLinear().domain([0, 30]).range([height, margin.top]);
+
+    const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+    const line = d3.line()
+      .x((d,i) => xScale(i))
+      .y(d => yScale(d));
+
+    // Draw lines
+    const lines = svg.selectAll(".line")
+      .data(data)
+      .enter()
+      .append("path")
+      .attr("class", "line")
+      .attr("d", d => line(d.values))
+      .attr("stroke", (d,i) => color(i));
+
+    // Axes
+    svg.append("g")
+      .attr("transform", `translate(0,${height})`)
+      .call(d3.axisBottom(xScale).ticks(5));
+    
+    svg.append("g")
+      .attr("transform", `translate(${margin.left},0)`)
+      .call(d3.axisLeft(yScale));
+
+    // Legend
+    const legend = svg.selectAll(".legend")
+      .data(data)
+      .enter()
+      .append("g")
+      .attr("class", "legend")
+      .attr("transform", (d,i) => `translate(${margin.left + i*120},${height + 30})`);
+
+    legend.append("rect")
+      .attr("width", 12)
+      .attr("height", 12)
+      .attr("fill", (d,i) => color(i));
+
+    legend.append("text")
+      .attr("x", 16)
+      .attr("y", 10)
+      .text(d => d.name);
+
+    // Interactivity
+    lines.on("mouseover", function(event, d) {
+      lines.classed("highlight", l => l.name === d.name);
+    })
+    .on("mouseout", function() {
+      lines.classed("highlight", false);
+    });
+
+    // Tooltip on hover
+    const tooltip = d3.select(".tooltip");
+    svg.selectAll(".dot")
+      .data(data.flatMap(d => d.values.map((v,i) => ({name: d.name, value: v, index: i}))))
+      .enter()
+      .append("circle")
+      .attr("class", "dot")
+      .attr("cx", d => xScale(d.index))
+      .attr("cy", d => yScale(d.value))
+      .attr("r", 4)
+      .attr("fill", d => color(data.findIndex(s => s.name === d.name)))
+      .on("mouseover", (event,d) => {
+        tooltip.style("display", "block")
+               .style("left", (event.pageX + 10) + "px")
+               .style("top", (event.pageY - 20) + "px")
+               .text(`${d.name}: ${d.value}`);
+      })
+      .on("mouseout", () => tooltip.style("display", "none"));
+  </script>
+</body>
+</html>
